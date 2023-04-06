@@ -2,6 +2,7 @@ use sha2::{Digest, Sha256};
 use std::fmt;
 
 #[derive(Default)]
+#[derive(Clone)]
 pub struct Checksum(String);
 
 impl Checksum {

@@ -1,48 +1,46 @@
+use std::collections::VecDeque;
 use super::checksum::Checksum;
 use super::Event;
 use crossbeam::channel::Sender;
-use std::fs;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 
 pub struct Package {
     pub name: String,
 }
 
 pub struct PackageDownloader {
+    pkgs: Arc<VecDeque<String>>,
     pkg_start_idx: usize,
     num_pkgs: usize,
     event_sender: Sender<Event>,
+    pkg_checksum: Checksum
 }
 
 impl PackageDownloader {
-    pub fn new(pkg_start_idx: usize, num_pkgs: usize, event_sender: Sender<Event>) -> Self {
+    pub fn new(pkgs: Arc<VecDeque<String>>, pkg_start_idx: usize, num_pkgs: usize, event_sender: Sender<Event>) -> Self {
         Self {
+            pkgs,
             pkg_start_idx,
             num_pkgs,
             event_sender,
+            pkg_checksum: Checksum::default()
         }
     }
 
-    pub fn run(&self, pkg_checksum: Arc<Mutex<Checksum>>) {
+    pub fn run(&mut self) -> Checksum {
         // Generate a set of packages and place them into the event queue
         // Update the package checksum with each package name
-        let file = fs::read_to_string("data/packages.txt").unwrap();
         for i in 0..self.num_pkgs {
-            let name = file
-                .lines()
-                .cycle()
-                .nth(self.pkg_start_idx + i)
-                .unwrap()
-                .to_owned();
+            let index = (self.pkg_start_idx + i) % self.pkgs.len();
+            let name = self.pkgs[index].clone();
 
-            pkg_checksum
-                .lock()
-                .unwrap()
+            self.pkg_checksum
                 .update(Checksum::with_sha256(&name));
 
             self.event_sender
                 .send(Event::DownloadComplete(Package { name }))
                 .unwrap();
         }
+        self.pkg_checksum.clone()
     }
 }

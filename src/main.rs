@@ -1,10 +1,14 @@
 #![warn(clippy::all)]
+
+use std::collections::VecDeque;
 use lab4::{
     checksum::Checksum, idea::IdeaGenerator, package::PackageDownloader, student::Student, Event,
 };
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use std::env;
 use std::error::Error;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::sync::{Arc, Mutex};
 use std::thread::spawn;
 
@@ -41,13 +45,26 @@ fn per_thread_amount(thread_idx: usize, total: usize, threads: usize) -> usize {
     per_thread + (thread_idx < extras) as usize
 }
 
+fn txt_to_lines(path: &str) -> VecDeque<String> {
+    let file = File::open(path).unwrap();
+    let reader = BufReader::new(file);
+    let mut vecdeque = VecDeque::new();
+
+    for line in reader.lines() {
+        let line = line.unwrap();
+        vecdeque.push_back(line);
+    }
+    vecdeque.clone()
+}
+
 fn hackathon(args: &Args) {
     // Use message-passing channel as event queue
     let (send, recv) = unbounded::<Event>();
     let mut threads = Vec::new();
+    let mut pkg_downloader_threads = VecDeque::new();
     // Checksums of all the generated ideas and packages
     let mut idea_checksum = Arc::new(Mutex::new(Checksum::default()));
-    let mut pkg_checksum = Arc::new(Mutex::new(Checksum::default()));
+    let mut pkg_checksum = Checksum::default();
     // Checksums of the ideas and packages used by students to build ideas. Should match the
     // previous checksums.
     let mut student_idea_checksum = Arc::new(Mutex::new(Checksum::default()));
@@ -63,15 +80,20 @@ fn hackathon(args: &Args) {
     }
 
     // Spawn package downloader threads. Packages are distributed evenly across threads.
+    let pkgs = Arc::new(txt_to_lines("data/packages.txt"));
     let mut start_idx = 0;
     for i in 0..args.num_pkg_gen {
         let num_pkgs = per_thread_amount(i, args.num_pkgs, args.num_pkg_gen);
-        let downloader = PackageDownloader::new(start_idx, num_pkgs, Sender::clone(&send));
-        let pkg_checksum = Arc::clone(&pkg_checksum);
+        let mut downloader = PackageDownloader::new(
+            pkgs.clone(),
+            start_idx,
+            num_pkgs,
+            Sender::clone(&send),
+        );
         start_idx += num_pkgs;
 
-        let thread = spawn(move || downloader.run(pkg_checksum));
-        threads.push(thread);
+        let thread = spawn(move || downloader.run());
+        pkg_downloader_threads.push_back(thread);
     }
     assert_eq!(start_idx, args.num_pkgs);
 
@@ -99,18 +121,22 @@ fn hackathon(args: &Args) {
 
     // Join all threads
     threads.into_iter().for_each(|t| t.join().unwrap());
+    pkg_downloader_threads.into_iter().for_each(|t| {
+        let checksum = t.join().unwrap();
+        pkg_checksum.update(checksum);
+    });
 
     let idea = Arc::get_mut(&mut idea_checksum).unwrap().get_mut().unwrap();
     let student_idea = Arc::get_mut(&mut student_idea_checksum)
         .unwrap()
         .get_mut()
         .unwrap();
-    let pkg = Arc::get_mut(&mut pkg_checksum).unwrap().get_mut().unwrap();
+    // let pkg = Arc::get_mut(&mut pkg_checksum).unwrap().get_mut().unwrap();
     let student_pkg = Arc::get_mut(&mut student_pkg_checksum)
         .unwrap()
         .get_mut()
         .unwrap();
 
     println!("Global checksums:\nIdea Generator: {}\nStudent Idea: {}\nPackage Downloader: {}\nStudent Package: {}", 
-        idea, student_idea, pkg, student_pkg);
+        idea, student_idea, pkg_checksum, student_pkg);
 }

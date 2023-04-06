@@ -2,11 +2,12 @@ use super::{checksum::Checksum, idea::Idea, package::Package, Event};
 use crossbeam::channel::{Receiver, Sender};
 use std::io::{stdout, Write};
 use std::sync::{Arc, Mutex};
+use std::collections::VecDeque;
 
 pub struct Student {
     id: usize,
     idea: Option<Idea>,
-    pkgs: Vec<Package>,
+    pkgs: VecDeque<Package>,
     skipped_idea: bool,
     event_sender: Sender<Event>,
     event_recv: Receiver<Event>,
@@ -19,7 +20,7 @@ impl Student {
             event_sender,
             event_recv,
             idea: None,
-            pkgs: vec![],
+            pkgs: VecDeque::new(),
             skipped_idea: false,
         }
     }
@@ -39,7 +40,7 @@ impl Student {
                 // Update idea and package checksums
                 // All of the packages used in the update are deleted, along with the idea
                 idea_checksum.update(Checksum::with_sha256(&idea.name));
-                let pkgs_used = self.pkgs.drain(0..pkgs_required).collect::<Vec<_>>();
+                let pkgs_used = self.pkgs.drain(0..pkgs_required).collect::<VecDeque<_>>();
                 for pkg in pkgs_used.iter() {
                     pkg_checksum.update(Checksum::with_sha256(&pkg.name));
                 }
@@ -77,7 +78,7 @@ impl Student {
                 Event::DownloadComplete(pkg) => {
                     // Getting a new package means the current idea may now be buildable, so the
                     // student attempts to build it
-                    self.pkgs.push(pkg);
+                    self.pkgs.push_back(pkg);
                     self.build_idea(&idea_checksum, &pkg_checksum);
                 }
 

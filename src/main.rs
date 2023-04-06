@@ -44,7 +44,7 @@ fn per_thread_amount(thread_idx: usize, total: usize, threads: usize) -> usize {
 fn hackathon(args: &Args) {
     // Use message-passing channel as event queue
     let (send, recv) = unbounded::<Event>();
-    let mut threads = vec![];
+    let mut threads = Vec::new();
     // Checksums of all the generated ideas and packages
     let mut idea_checksum = Arc::new(Mutex::new(Checksum::default()));
     let mut pkg_checksum = Arc::new(Mutex::new(Checksum::default()));

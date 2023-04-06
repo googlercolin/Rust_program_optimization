@@ -26,9 +26,9 @@ impl PackageDownloader {
     pub fn run(&self, pkg_checksum: Arc<Mutex<Checksum>>) {
         // Generate a set of packages and place them into the event queue
         // Update the package checksum with each package name
+        let file = fs::read_to_string("data/packages.txt").unwrap();
         for i in 0..self.num_pkgs {
-            let name = fs::read_to_string("data/packages.txt")
-                .unwrap()
+            let name = file
                 .lines()
                 .cycle()
                 .nth(self.pkg_start_idx + i)
@@ -39,6 +39,7 @@ impl PackageDownloader {
                 .lock()
                 .unwrap()
                 .update(Checksum::with_sha256(&name));
+
             self.event_sender
                 .send(Event::DownloadComplete(Package { name }))
                 .unwrap();

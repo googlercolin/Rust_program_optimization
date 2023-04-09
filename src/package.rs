@@ -12,12 +12,12 @@ pub struct PackageDownloader {
     pkgs: Arc<VecDeque<String>>,
     pkg_start_idx: usize,
     num_pkgs: usize,
-    event_sender: Sender<Package>,
+    event_sender: Sender<Event>,
     pkg_checksum: Checksum
 }
 
 impl PackageDownloader {
-    pub fn new(pkgs: Arc<VecDeque<String>>, pkg_start_idx: usize, num_pkgs: usize, event_sender: Sender<Package>) -> Self {
+    pub fn new(pkgs: Arc<VecDeque<String>>, pkg_start_idx: usize, num_pkgs: usize, event_sender: Sender<Event>) -> Self {
         Self {
             pkgs,
             pkg_start_idx,
@@ -38,7 +38,7 @@ impl PackageDownloader {
                 .update(Checksum::with_sha256(&name));
 
             self.event_sender
-                .send(Package { name })
+                .send(Event::DownloadComplete(Package { name }))
                 .unwrap();
         }
         self.pkg_checksum.clone()

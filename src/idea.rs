@@ -4,6 +4,7 @@ use super::Event;
 use crossbeam::channel::Sender;
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct Idea {
     pub name: String,
     pub num_pkg_required: usize,
@@ -13,9 +14,8 @@ pub struct IdeaGenerator {
     ideas: Arc<VecDeque<(String, String)>>,
     idea_start_idx: usize,
     num_ideas: usize,
-    // num_students: usize,
     num_pkgs: usize,
-    event_sender: Sender<Option<Idea>>,
+    idea_sender: Sender<Event>,
     pkg_per_idea: usize,
     extra_pkgs: usize,
     idea_checksum: Checksum,
@@ -26,17 +26,15 @@ impl IdeaGenerator {
         ideas: Arc<VecDeque<(String, String)>>,
         idea_start_idx: usize,
         num_ideas: usize,
-        // num_students: usize,
         num_pkgs: usize,
-        event_sender: Sender<Option<Idea>>,
+        idea_sender: Sender<Event>,
     ) -> Self {
         Self {
             ideas,
             idea_start_idx,
             num_ideas,
-            // num_students,
             num_pkgs,
-            event_sender,
+            idea_sender,
             pkg_per_idea: num_pkgs / num_ideas,
             extra_pkgs: num_pkgs % num_ideas,
             idea_checksum: Checksum::default(),
@@ -61,13 +59,9 @@ impl IdeaGenerator {
                 num_pkg_required,
             };
 
-            // idea_checksum
-            //     .lock()
-            //     .unwrap()
-            //     .update(Checksum::with_sha256(&idea.name));
             self.idea_checksum.update(Checksum::with_sha256(&idea.name));
 
-            self.event_sender.send(Some(idea)).unwrap();
+            self.idea_sender.send(Event::NewIdea(idea)).unwrap();
         }
         self.idea_checksum.clone()
     }

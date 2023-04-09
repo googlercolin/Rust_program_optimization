@@ -1,9 +1,7 @@
 #![warn(clippy::all)]
 
 use std::collections::VecDeque;
-use lab4::{
-    checksum::Checksum, idea::IdeaGenerator, package::PackageDownloader, student::Student,
-};
+use lab4::{checksum::Checksum, Event, idea::IdeaGenerator, package::PackageDownloader, student::Student};
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use std::env;
 use std::error::Error;
@@ -75,9 +73,9 @@ fn get_ideas() -> VecDeque<(String, String)>{
 
 fn hackathon(args: &Args) {
     // Use message-passing channel as pkg event queue
-    let (pkg_send, pkg_recv) = unbounded::<Package>();
+    let (pkg_send, pkg_recv) = unbounded::<Event>();
     // Use message-passing channel as idea event queue
-    let (idea_send, idea_recv) = unbounded::<Option<Idea>>();
+    let (idea_send, idea_recv) = unbounded::<Event>();
 
     // Initialize threads
     let mut threads = VecDeque::new();
@@ -155,7 +153,7 @@ fn hackathon(args: &Args) {
 
     // Insert poison pills for students after ideas generated
     for _ in 0..args.num_students {
-        idea_send.send(None);
+        idea_send.send(Event::OutOfIdeas);
     }
 
     // Join student threads
@@ -164,17 +162,6 @@ fn hackathon(args: &Args) {
         student_idea.update(checksums.0);
         student_pkg.update(checksums.1);
     });
-
-    // // let idea = Arc::get_mut(&mut idea_checksum).unwrap().get_mut().unwrap();
-    // let student_idea = Arc::get_mut(&mut student_idea_checksum)
-    //     .unwrap()
-    //     .get_mut()
-    //     .unwrap();
-    // // let pkg = Arc::get_mut(&mut pkg_checksum).unwrap().get_mut().unwrap();
-    // let student_pkg = Arc::get_mut(&mut student_pkg_checksum)
-    //     .unwrap()
-    //     .get_mut()
-    //     .unwrap();
 
     println!("Global checksums:\nIdea Generator: {}\nStudent Idea: {}\nPackage Downloader: {}\nStudent Package: {}", 
         idea_checksum, student_idea, pkg_checksum, student_pkg);

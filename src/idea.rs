@@ -1,8 +1,8 @@
+use std::collections::VecDeque;
 use super::checksum::Checksum;
 use super::Event;
 use crossbeam::channel::Sender;
-use std::fs;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 pub struct Idea {
     pub name: String,
@@ -10,72 +10,65 @@ pub struct Idea {
 }
 
 pub struct IdeaGenerator {
+    ideas: Arc<VecDeque<(String, String)>>,
     idea_start_idx: usize,
     num_ideas: usize,
-    num_students: usize,
+    // num_students: usize,
     num_pkgs: usize,
-    event_sender: Sender<Event>,
+    event_sender: Sender<Option<Idea>>,
+    pkg_per_idea: usize,
+    extra_pkgs: usize,
+    idea_checksum: Checksum,
 }
 
 impl IdeaGenerator {
     pub fn new(
+        ideas: Arc<VecDeque<(String, String)>>,
         idea_start_idx: usize,
         num_ideas: usize,
-        num_students: usize,
+        // num_students: usize,
         num_pkgs: usize,
-        event_sender: Sender<Event>,
+        event_sender: Sender<Option<Idea>>,
     ) -> Self {
         Self {
+            ideas,
             idea_start_idx,
             num_ideas,
-            num_students,
+            // num_students,
             num_pkgs,
             event_sender,
+            pkg_per_idea: num_pkgs / num_ideas,
+            extra_pkgs: num_pkgs % num_ideas,
+            idea_checksum: Checksum::default(),
         }
     }
 
     // Idea names are generated from cross products between product names and customer names
-    fn get_next_idea_name(idx: usize) -> String {
-        let products = fs::read_to_string("data/ideas-products.txt").expect("file not found");
-        let customers = fs::read_to_string("data/ideas-customers.txt").expect("file not found");
-        let ideas = Self::cross_product(products, customers);
-        let pair = &ideas[idx % ideas.len()];
+    fn get_next_idea_name(&self, idx: usize) -> String {
+        let pair = &self.ideas[idx % self.ideas.len()];
         format!("{} for {}", pair.0, pair.1)
     }
 
-    fn cross_product(products: String, customers: String) -> Vec<(String, String)> {
-        products
-            .lines()
-            .flat_map(|p| customers.lines().map(move |c| (p.to_owned(), c.to_owned())))
-            .collect()
-    }
-
-    pub fn run(&self, idea_checksum: Arc<Mutex<Checksum>>) {
-        let pkg_per_idea = self.num_pkgs / self.num_ideas;
-        let extra_pkgs = self.num_pkgs % self.num_ideas;
-
+    pub fn run(&mut self) -> Checksum {
         // Generate a set of new ideas and place them into the event-queue
         // Update the idea checksum with all generated idea names
         for i in 0..self.num_ideas {
-            let name = Self::get_next_idea_name(self.idea_start_idx + i);
-            let extra = (i < extra_pkgs) as usize;
-            let num_pkg_required = pkg_per_idea + extra;
+            let name = self.get_next_idea_name(self.idea_start_idx + i);
+            let extra = (i < self.extra_pkgs) as usize;
+            let num_pkg_required = self.pkg_per_idea + extra;
             let idea = Idea {
                 name,
                 num_pkg_required,
             };
 
-            idea_checksum
-                .lock()
-                .unwrap()
-                .update(Checksum::with_sha256(&idea.name));
+            // idea_checksum
+            //     .lock()
+            //     .unwrap()
+            //     .update(Checksum::with_sha256(&idea.name));
+            self.idea_checksum.update(Checksum::with_sha256(&idea.name));
 
-            self.event_sender.send(Event::NewIdea(idea)).unwrap();
+            self.event_sender.send(Some(idea)).unwrap();
         }
-
-        // Push student termination events into the event queue
-        for _ in 0..self.num_students {
-            self.event_sender.send(Event::OutOfIdeas).unwrap();
-        }
+        self.idea_checksum.clone()
     }
 }

@@ -9,8 +9,6 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::sync::Arc;
 use std::thread::spawn;
-use lab4::idea::Idea;
-use lab4::package::Package;
 
 struct Args {
     pub num_ideas: usize,

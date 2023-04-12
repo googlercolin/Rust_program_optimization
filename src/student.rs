@@ -40,12 +40,12 @@ impl Student {
             self.pkg_checksum.update(Checksum::with_sha256(&pkg.name));
         }
         let pkgs_required = pkgs.len();
-        let mut build_str = format!("\nStudent {} built {} using {} packages\nIdea checksum: {}\nPackage checksum: {}\n",
-                                    self.id, idea.name, pkgs_required, self.idea_checksum, self.pkg_checksum);
-        for pkg in pkgs {
-            build_str += &format!("> {}\n", pkg.name);
-        }
-        self.build_msg += &build_str;
+        // let mut build_str = format!("\nStudent {} built {} using {} packages\nIdea checksum: {}\nPackage checksum: {}\n",
+        //                             self.id, idea.name, pkgs_required, self.idea_checksum, self.pkg_checksum);
+        // for pkg in pkgs {
+        //     build_str += &format!("> {}\n", pkg.name);
+        // }
+        // self.build_msg += &build_str;
         self.idea = None;
     }
 
@@ -77,7 +77,7 @@ impl Student {
                 }
 
                 Event::OutOfIdeas => {
-                    write!(io::stdout(), "{}", self.build_msg).unwrap();
+                    // write!(io::stdout(), "{}", self.build_msg).unwrap();
                     return (self.idea_checksum.clone(), self.pkg_checksum.clone())
                 }
             }

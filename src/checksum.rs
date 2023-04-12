@@ -3,13 +3,13 @@ use std::fmt;
 
 #[derive(Default)]
 #[derive(Clone)]
-pub struct Checksum(String);
+pub struct Checksum(Vec<u8>);
 
 impl Checksum {
     // Initialize the checksum with the SHA256 hash of the input string
     pub fn with_sha256(sha: &str) -> Self {
         let digest = Sha256::digest(sha.as_bytes());
-        Self(hex::encode(digest.as_slice()))
+        Self(digest.as_slice().to_vec())
     }
 
     // XOR the two checksums
@@ -18,8 +18,8 @@ impl Checksum {
             *self = rhs;
         } else if rhs.0.is_empty() {
         } else {
-            let a = hex::decode(&self.0).unwrap();
-            let b = hex::decode(&rhs.0).unwrap();
+            let a = &self.0;
+            let b = &rhs.0;
             assert_eq!(a.len(), b.len());
 
             let c = a
@@ -27,13 +27,13 @@ impl Checksum {
                 .zip(b.iter())
                 .map(|(x, y)| x ^ y)
                 .collect::<Vec<_>>();
-            *self = Checksum(hex::encode(c))
+            *self = Checksum(c)
         };
     }
 }
 
 impl fmt::Display for Checksum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", hex::encode(&self.0))
     }
 }

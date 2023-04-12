@@ -4,15 +4,6 @@ use std::io::Write;
 use std::collections::VecDeque;
 use std::io;
 
-// pub struct Student {
-//     id: usize,
-//     idea: Option<Idea>,
-//     pkgs: VecDeque<Package>,
-//     skipped_idea: bool,
-//     event_sender: Sender<Event>,
-//     event_recv: Receiver<Event>,
-// }
-
 pub struct Student {
     id: usize,
     pkg_recv: Receiver<Event>,

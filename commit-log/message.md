@@ -11,7 +11,7 @@ only essential for printouts.
 
 # Technical details
 
-## Removed redundant file reads and improving package name retrieval
+### Removed redundant file reads and improving package name retrieval
 To eliminate the need for re-reading entire data files on every generation of a package or idea,
 we moved the file reads to the main thread when the program starts. This data is loaded into 
 `VecDeque`s and shared using `Arc` with threads which require the data. This allows for indexed
@@ -20,17 +20,17 @@ For obtaining package names (in the `run()` function in `PackageDownloader`) in 
 using the `cycle()` method to obtain the index for the package name is expensive. To reduce 
 the time consumed by `Iterator::nth`, we use modular arithmetic to obtain the required index instead.
 
-## Removed redundant locks to reduce idle waiting time (`crossbeam_utils::backoff::Backoff::spin`)
+### Removed redundant locks to reduce idle waiting time (`crossbeam_utils::backoff::Backoff::spin`)
 We perform XORs for idea and package hashes locally for each thread. These values are accumulated
 for each thread. All the local checksums will be joined in the main thread after each thread 
 terminates, and the final global checksums (`idea_checksum`, `pkg_checksum`, `student_idea`, 
 `student_pkg`) are obtained. 
 
-## Removed redundant checksum hex encodings
+### Removed redundant checksum hex encodings
 Hex encoding / decoding is unnecessary when updating a checksum, this is only required in printouts. 
 Hence, we use a `Vec<u8>` to store raw bytes instead of the hex-encoded bytes in a `String`.
 
-## Refactored message-passing channels to reduce contention
+### Refactored message-passing channels to reduce contention
 Significant contention arises from the single message-passing channel which the producers 
 (`PackageDownloader` and `IdeaGenerator`) and consumer (`Student`) share. Students may have to 
 push ideas back into the channel, which increases contention due to more push and pop operations.
@@ -44,7 +44,7 @@ We compare our outputs from this optimization and the original code by performin
 and `student_pkg`) were identical for all runs. This indicates that the optimized code is
 functionally correct.
 
-# Testing for performance.
+# Testing for performance
 
 We report consistently faster performance for our optimized code, especially as the `num_pkgs`
 increases. We find that running `hyperfine -i "target/release/lab4 80 2 100000 6 6" --warmup=3`

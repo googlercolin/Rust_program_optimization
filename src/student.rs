@@ -1,8 +1,6 @@
 use super::{checksum::Checksum, idea::Idea, package::Package, Event};
 use crossbeam::channel::Receiver;
-use std::io::Write;
 use std::collections::VecDeque;
-use std::io;
 
 pub struct Student {
     id: usize,
@@ -10,7 +8,7 @@ pub struct Student {
     pkg_checksum: Checksum,
     idea_recv: Receiver<Event>,
     idea_checksum: Checksum,
-    build_msg: String,
+    // build_msg: String,
     idea: Option<Idea>,
     pkgs: VecDeque<Package>
 }
@@ -23,7 +21,7 @@ impl Student {
             pkg_checksum: Checksum::default(),
             idea_recv,
             idea_checksum: Checksum::default(),
-            build_msg: String::new(),
+            // build_msg: String::new(),
             idea: None,
             pkgs: VecDeque::new()
         }
@@ -39,7 +37,7 @@ impl Student {
         for pkg in pkgs {
             self.pkg_checksum.update(Checksum::with_sha256(&pkg.name));
         }
-        let pkgs_required = pkgs.len();
+        // let pkgs_required = pkgs.len();
         // let mut build_str = format!("\nStudent {} built {} using {} packages\nIdea checksum: {}\nPackage checksum: {}\n",
         //                             self.id, idea.name, pkgs_required, self.idea_checksum, self.pkg_checksum);
         // for pkg in pkgs {
@@ -52,10 +50,8 @@ impl Student {
     pub fn run(&mut self) -> (Checksum, Checksum) {
         let mut pkgs:VecDeque<Package> = VecDeque::new();
         loop {
-            // let event = self.event_recv.recv().unwrap();
             let received_idea = self.idea_recv.recv().unwrap();
             match received_idea {
-
                 Event::NewIdea(idea) => {
                     // If the student is not working on an idea, then they will take the new idea
                     // and attempt to build it. Otherwise, the idea is skipped.

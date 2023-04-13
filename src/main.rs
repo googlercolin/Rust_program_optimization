@@ -76,7 +76,7 @@ fn hackathon(args: &Args) {
     let (idea_send, idea_recv) = unbounded::<Event>();
 
     // Initialize threads
-    let mut threads = VecDeque::new();
+    let mut student_threads = VecDeque::new();
     let mut pkg_downloader_threads = VecDeque::new();
     let mut idea_gen_threads = VecDeque::new();
 
@@ -91,9 +91,9 @@ fn hackathon(args: &Args) {
 
     // Spawn student threads
     for i in 0..args.num_students {
-        let mut student = Student::new(i, Receiver::clone(&pkg_recv), Receiver::clone(&idea_recv));
+        let mut student = Student::new( i, Receiver::clone(&pkg_recv), Receiver::clone(&idea_recv));
         let thread = spawn(move || student.run());
-        threads.push_back(thread);
+        student_threads.push_back(thread);
     }
 
     // Spawn package downloader threads. Packages are distributed evenly across threads.
@@ -108,7 +108,6 @@ fn hackathon(args: &Args) {
             Sender::clone(&pkg_send),
         );
         start_idx += num_pkgs;
-
         let thread = spawn(move || downloader.run());
         pkg_downloader_threads.push_back(thread);
     }
@@ -155,7 +154,7 @@ fn hackathon(args: &Args) {
     }
 
     // Join student threads
-    threads.into_iter().for_each(|t| {
+    student_threads.into_iter().for_each(|t| {
         let checksums = t.join().unwrap();
         student_idea.update(checksums.0);
         student_pkg.update(checksums.1);

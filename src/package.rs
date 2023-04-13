@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use super::checksum::Checksum;
 use super::Event;
 use crossbeam::channel::Sender;
-use std::sync::{Arc};
+use std::sync::Arc;
 
 pub struct Package {
     pub name: String,
@@ -17,7 +17,10 @@ pub struct PackageDownloader {
 }
 
 impl PackageDownloader {
-    pub fn new(pkgs: Arc<VecDeque<String>>, pkg_start_idx: usize, num_pkgs: usize, event_sender: Sender<Event>) -> Self {
+    pub fn new(pkgs: Arc<VecDeque<String>>,
+               pkg_start_idx: usize,
+               num_pkgs: usize,
+               event_sender: Sender<Event>) -> Self {
         Self {
             pkgs,
             pkg_start_idx,
